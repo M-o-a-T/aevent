@@ -2,9 +2,11 @@
 ``aevent``: an asyncronizing library
 ====================================
 
-``aevent`` allows you to call boring synchronous Python from async code,
-without blocking.
+``aevent`` lets you call boring synchronous Python from async code.
+Without blocking or splatting ``async`` and ``await`` onto it.
+Ideally, this works without modifying the synchronous code.
 
+Put another way,
 ``aevent`` is to ``gevent`` what ``anyio`` is to ``greenlet``.
 
 That is, it replaces standard Python functions with calls to ``anyio``
@@ -25,11 +27,14 @@ This will annoy various code checkers, but that can't be helped.
 **Start your main loop** using `aevent.run`, or call ``await aevent.per_task()``
 in the task(s) that need to use patched code.
 
+The `aevent.native` and `aevent.patched` context managers can be used to
+temporarily disable or re-enable ``aevent``'s patches.
 
-Supporting code
----------------
 
-``aevent`` monkey-patches `anyio.abc.TaskGroup.spawn` in two ways.
+Support functions
+-----------------
+
+``aevent`` monkey-patches ``anyio``'s ``TaskGroup.spawn` in two ways.
 
 * the child task is instrumented to support `greenback`.
 
@@ -66,12 +71,18 @@ Not yet supported
 
 This list is cribbed from ``gevent.patch``.
 
+
 Internals
 =========
 
+``aevent``'s monkey patching is done mainly on the module/class level.
+``gevent`` prefers to patch individual methods. This may cause some
+reduced compatibility compared to ``gevent``.
+
 ``aevent`` works by prepending its local ``_monkey`` directory to the import path.
-These try hard to afford the same public interface, but call the
-corresponding ``anyio`` functions in the background.
+These modules try to afford the same public interface as the ones they're
+replacing while calling the corresponding ``anyio`` functions through
+`greenback_`.
 
 Context switching back to async-flavored code is done by way of greenback_.
 
@@ -84,3 +95,8 @@ The test suite runs with Trio as backend. Due to ``aevent``'s monkeypatching,
 switching backends around is not supported. However, you can set the
 environment variable ``AEVENT_BACKEND`` to ``asyncio`` to run the test
 suite with that.
+
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _trio: https://github.com/python-trio/trio
+.. _anyio: https://github.com/agronholm/anyio
+.. _greenback: https://github.com/oremanj/greenback
