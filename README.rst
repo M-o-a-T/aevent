@@ -1,10 +1,16 @@
-Purpose of this library
-=======================
+====================================
+``aevent``: an asyncronizing library
+====================================
+
+``aevent`` allows you to call boring synchronous Python from async code,
+without blocking.
 
 ``aevent`` is to ``gevent`` what ``anyio`` is to ``greenlet``.
 
 That is, it replaces standard Python functions with calls to ``anyio``
 instead of ``gevent``.
+
+Some limitations apply.
 
 Usage
 =====
@@ -36,6 +42,7 @@ Supported modules
 =================
 
 * time
+
   * sleep
 
 Not yet supported
@@ -48,8 +55,11 @@ Not yet supported
 * dns
 * select
 * os
+
   * read
+
   * write
+
 * ssl
 * subprocess
 * signal
