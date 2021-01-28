@@ -43,6 +43,14 @@ Support functions
 Call `aevent.per_task` in your child task if you start tasks some other way.
 
 
+Threading
+---------
+
+Threads are translated to tasks. In order for that to work, you must start
+your program with `aevent.run`, or run the sync code in question within an
+`aevent.runner` async context manager. Runners may be nested.
+
+
 Supported modules
 =================
 
@@ -50,11 +58,12 @@ Supported modules
 
   * sleep
 
+* threading
+* queue
+
 Not yet supported
 -----------------
 
-* threading
-* queue
 * socket
 
 * dns
