@@ -1,6 +1,5 @@
 import anyio as _anyio
-from greenback import await_ as _await
-from aevent import _patch
+from aevent import patch_ as _patch, await_ as _await
 
 from time import *
 

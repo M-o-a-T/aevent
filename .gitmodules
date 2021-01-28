@@ -1,0 +1,3 @@
+[submodule "sample/pyroute2"]
+	path = sample/pyroute2
+	url = https://github.com/svinota/pyroute2.git

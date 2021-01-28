@@ -10,10 +10,14 @@ import os
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from functools import partial, update_wrapper
-from inspect import currentframe
+from inspect import currentframe, iscoroutinefunction
+from outcome import Error, Value
 
 _monkey = None
 no_patch = ContextVar('no_patch', default=False)
+in_wrapper = ContextVar('in_wrapper', default=False)
+
+await_ = greenback.await_
 
 @contextmanager
 def native(val=True):
@@ -76,6 +80,9 @@ def setup(backend='trio', exclude=()):
         sys.modules[m] = mm
 
     import_mod('time')
+    import_mod('socket')
+    import_mod('queue')
+    import_mod('threading')
     if 'spawn' not in exclude:
         _real_spawn = TG.spawn
         async def spawn(taskgroup, proc, *args, **kw):
@@ -107,7 +114,81 @@ def setup(backend='trio', exclude=()):
             return scope
         TG.spawn = spawn
 
+    if backend == 'trio':
+        from anyio._backends._trio import TestRunner as TR
+        if not hasattr(TR,"call_sync"):
+            TR_init = TR.__init__
+            TR_trio_main = TR._trio_main
+            TR_call = TR.call
+            TR_call_func = TR._call_func
+            TR_close = TR.close
+            def _init(*a,**k):
+                with native():
+                    TR_init(*a,**k)
+            async def _trio_main(self):
+                #in_wrapper.set(True)
+                await TR_trio_main(self)
+
+            async def call_func(self, func, args, kwargs):
+                if not in_wrapper.get():
+                    in_wrapper.set(True)
+                    await per_task()
+                try:
+                    retval = await func(*args, **kwargs)
+                except Exception as exc:
+                    self._result_queue.append(Error(exc))
+                except BaseException as exc:
+                    self._result_queue.append(Error(exc))
+                    raise
+                else:
+                    self._result_queue.append(Value(retval))
+
+
+            def call_sync(self, func, *args, **kwargs):
+                async def _func(func, *args, **kwargs):
+                    try:
+                        return func(*args, **kwargs)
+                    except StopIteration:
+                        raise StopAsyncIteration
+                if in_wrapper.get():
+                    return func(*args, **kwargs)
+                try:
+                    return TR_call(self, _func, func, *args, **kwargs)
+                except StopAsyncIteration:
+                    raise StopIteration
+                except Exception as exc:
+                    # attach debugger here:
+                    raise
+
+            def call(self, func, *args, **kwargs):
+                if self._stop_event is not None and self._stop_event.is_set():
+                    # Owch.
+                    T = TR()
+                    try:
+                        return T.call(func, *args, **kwargs)
+                    finally:
+                        T.close()
+                assert not in_wrapper.get()
+                try:
+                    return TR_call(self, func, *args, **kwargs)
+                except StopAsyncIteration:
+                    raise StopIteration
+
+            def close(self):
+                TR_close(self)
+
+            TR.__init__ = _init # update_wrapper(_init, TR_init)
+            TR._trio_main = _trio_main # update_wrapper(_main, TR_trio_main)
+            TR.call = call # update_wrapper(call, TR_call)
+            TR.call_sync = call_sync
+            TR._call_func = call_func
+            TR.close = close
+
+
     sys.path[0:0] = [os.path.join(_monkey.__path__[0],"_monkey")]
+
+def F():
+    sys.stdout.flush()
 
 async def per_task():
     """
@@ -127,14 +208,31 @@ def run(proc, *a, **k):
     elif _backend == 'asyncio':
         return asyncio.run(_runner(proc, a, k))
 
-def _patch(fn):
-    fname = fn.__name__
-    f = currentframe().f_back
-    _orig = f.f_globals[fname]
+def patch_(fn, name=None, orig=None):
+    """
+    Convince an async to replace a sync one.
+    """
+    if isinstance(fn,partial):
+        fname = fn.func.__name__
+    else:
+        fname = fn.__name__
+    orig = orig or currentframe().f_back.f_globals[fname]
 
-    def _new(_orig, *a, **k):
-        if no_patch.get():
-            return _orig(*a, **k)
-        return greenback.await_(fn(*a, **k))
-    return update_wrapper(partial(_new,_orig), fn)
+    def fn_async(orig, fn):
+        def _new_async(*a, **k):
+            if no_patch.get():
+                return orig(*a, **k)
+            return greenback.await_(fn(*a, **k))
+        return _new_async
+
+    def fn_sync(orig, fn):
+        def _new_sync(*a, **k):
+            if no_patch.get():
+                return orig(*a, **k)
+            return fn(*a, **k)
+        return _new_sync
+
+    if iscoroutinefunction(fn):
+        return update_wrapper(fn_async(orig,fn), fn)
+    return update_wrapper(fn_sync(orig,fn), fn)
 
