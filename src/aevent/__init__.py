@@ -16,6 +16,7 @@ from outcome import Error, Value
 _monkey = None
 no_patch = ContextVar('no_patch', default=False)
 in_wrapper = ContextVar('in_wrapper', default=False)
+taskgroup = ContextVar('taskgroup')
 
 await_ = greenback.await_
 
@@ -37,6 +38,28 @@ def patched():
     """
     return native(val=False)
 
+@asynccontextmanager
+async def runner():
+    async with anyio.create_task_group() as tg:
+        token = taskgroup.set(tg)
+        try:
+            yield tg
+        finally:
+            taskgroup.reset(token)
+
+def run(proc, *args, **kwargs):
+    """
+    A replacement for anyio.run().
+
+    You need to use this, or an async `runner` context, if you want to use
+    threading.
+    """
+    async def _run():
+        async with runner():
+            return await proc(*args, **kwargs)
+    return anyio.run(_run)
+
+_setup_done = False
 def setup(backend='trio', exclude=()):
     """
     Set up the aevent imports and patches.
@@ -53,6 +76,14 @@ def setup(backend='trio', exclude=()):
     Pseudo modules:
     * spawn: controls the behavior of `anyio.spawn`.
     """
+
+    global _setup_done
+    if not _setup_done:
+        _setup_done = backend
+    elif _setup_done == backend:
+        return
+    else:
+        raise RuntimeError("You're trying to mix backends")
 
     global _monkey
     global _backend
@@ -85,7 +116,7 @@ def setup(backend='trio', exclude=()):
     import_mod('threading')
     if 'spawn' not in exclude:
         _real_spawn = TG.spawn
-        async def spawn(taskgroup, proc, *args, **kw):
+        async def spawn(taskgroup, proc, *args, _aevent_name=None, **kw):
             """
             Run a task within this task group.
 
@@ -93,7 +124,11 @@ def setup(backend='trio', exclude=()):
             """
 
             if no_patch.get():
-                return await _real_spawn(taskgroup, proc, *args, **kw)
+                if kw:
+                    proc=partial(proc,*args,**kw)
+                    args=()
+                    kw={}
+                return await _real_spawn(taskgroup, proc, *args, name=_aevent_name)
 
             scope = None
 
@@ -109,7 +144,7 @@ def setup(backend='trio', exclude=()):
                     await proc(*args, **kw)
 
             evt = anyio.create_event()
-            await _real_spawn(taskgroup, _run, proc, args, kw, evt)
+            await _real_spawn(taskgroup, _run, proc, args, kw, evt, name=_aevent_name)
             await evt.wait()
             return scope
         TG.spawn = spawn

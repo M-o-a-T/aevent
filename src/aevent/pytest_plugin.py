@@ -12,6 +12,8 @@ from anyio._core._eventloop import get_all_backends, get_asynclib
 from anyio.abc import TestRunner
 from anyio.pytest_plugin import extract_backend_and_options
 
+from . import runner as aevent_runner
+
 import _pytest.nose as _nose
 
 _current_runner: Optional[TestRunner] = None
@@ -137,25 +139,27 @@ def pytest_pyfunc_call(pyfuncitem):
         testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
         teardown = False
         with get_runner(backend_name, backend_options) as runner:
-
-            try:
-                self = pyfuncitem.obj.__self__
-            except AttributeError:
-                pass
-            else:
-                runner.call_sync(_nose.call_optional, self, "setup")
-                try:
-                    teardown = self.teardown
-                except AttributeError:
-                    pass
-            try:
-                if iscoroutinefunction(pyfuncitem.obj):
-                    runner.call(pyfuncitem.obj, **testargs)
-                else:
-                    runner.call_sync(pyfuncitem.obj, **testargs)
-            finally:
-                if teardown:
-                    runner.call_sync(teardown)
+            async def _main():
+                async with aevent_runner():
+                    try:
+                        self = pyfuncitem.obj.__self__
+                    except AttributeError:
+                        pass
+                    else:
+                        _nose.call_optional(self, "setup")
+                        try:
+                            teardown = self.teardown
+                        except AttributeError:
+                            pass
+                    try:
+                        if iscoroutinefunction(pyfuncitem.obj):
+                            await pyfuncitem.obj(**testargs)
+                        else:
+                            pyfuncitem.obj(**testargs)
+                    finally:
+                        if teardown:
+                            teardown()
+            runner.call(_main)
         return True
 
 
