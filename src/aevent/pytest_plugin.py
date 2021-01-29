@@ -48,10 +48,8 @@ def pytest_configure(config):
 
 
 def pytest_fixture_setup(fixturedef, request):
-    def wrapper(*args, anyio_backend, **kwargs):
-        backend_name, backend_options = extract_backend_and_options(anyio_backend)
-        if has_backend_arg:
-            kwargs['anyio_backend'] = anyio_backend
+    def wrapper(*args, **kwargs):
+        backend_name, backend_options = extract_backend_and_options("trio")
 
         with get_runner(backend_name, backend_options) as runner:
             if isasyncgenfunction(func):
@@ -98,10 +96,7 @@ def pytest_fixture_setup(fixturedef, request):
     if fixturedef.argname == "anyio_backend":
         return
     func = fixturedef.func
-    has_backend_arg = 'anyio_backend' in fixturedef.argnames
     fixturedef.func = wrapper
-    if not has_backend_arg:
-        fixturedef.argnames += ('anyio_backend',)
 
 
 def pytest_pycollect_makeitem(collector, name, obj):
