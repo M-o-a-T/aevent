@@ -8,35 +8,44 @@ class Queue:
 	_size = 0
 	_q_r,_q_w = None,None
 	_count = 0
+	_count_unack = 0
 	_count_zero = None
 
-	def __init__(self, maxsize=1):
-		self._size = maxsize
+	def __init__(self, maxsize=0):
+		self._size = maxsize or 9999999
 
 	def qsize(self):
-		return self._size
-
+		return self._count
 
 	def get(self, block=True, timeout=None):
 		return _await(self._get(block, timeout))
 	
+	def get_nowait(self):
+		return _await(self._get(False, 0))
+
 	async def _get(self, block, timeout):
 		if self._q_r is None:
 			self._q_w,self._q_r = _anyio.create_memory_object_stream(self._size)
 		if not block:
 			timeout = 0.01 # TODO
 		if timeout is None:
-			return await self._q_r.receive()
+			res = await self._q_r.receive()
 		else:
 			async with _anyio.fail_after(timeout):
-				return await self._q_r.receive()
+				res = await self._q_r.receive()
+		self._count -= 1
+		return res
 
+
+	def put_nowait(self, item):
+		_await(self._put(item,0.01))  # TODO
 
 	def put(self, item, timeout=None):
 		_await(self._put(item,timeout))
 	
 	async def _put(self, item, timeout):
 		self._count += 1
+		self._count_unack += 1
 		try:
 			if self._q_r is None:
 				self._q_w,self._q_r = _anyio.create_memory_object_stream(self._size)
@@ -46,6 +55,7 @@ class Queue:
 				async with _anyio.fail_after(timeout):
 					await self._q_w.send(item)
 		except BaseException:
+			self._count -= 1
 			await self._task_done()
 			raise
 
@@ -54,9 +64,9 @@ class Queue:
 		_await(self._task_done())
 
 	async def _task_done(self):
-		if self._count > 0:
-			self._count -= 1
-		if self._count == 0 and self._count_zero is not None:
+		if self._count_unack > 0:
+			self._count_unack -= 1
+		if self._count_unack == 0 and self._count_zero is not None:
 			await self._count_zero.set()
 	
 
