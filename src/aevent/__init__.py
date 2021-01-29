@@ -113,6 +113,7 @@ def setup(backend='trio', exclude=()):
     import_mod('time')
     import_mod('socket')
     import_mod('queue')
+    import_mod('select')
     import_mod('threading')
     if 'spawn' not in exclude:
         _real_spawn = TG.spawn
