@@ -12,8 +12,8 @@ from functools import partial as _partial
 
 class socket(_socket):
 	def close(self):
-		import pdb;pdb.set_trace()
-		pass
+		super().close()
+
 	def send(self, *args):
 		_await(_anyio.wait_socket_writable(self.fileno()))
 		return super().send(*args)
@@ -25,12 +25,24 @@ class socket(_socket):
 		return super().sendmsg(*args)
 	def recv(self, *args):
 		_await(_anyio.wait_socket_readable(self.fileno()))
-		return super().send(*args)
-	def recv(self, *args):
-		_await(_anyio.wait_socket_readable(self.fileno()))
 		return super().recv(*args)
+	def recvmsg(self, *args):
+		_await(_anyio.wait_socket_readable(self.fileno()))
+		return super().recvmsg(*args)
+	def recvfrom(self, *args):
+		_await(_anyio.wait_socket_readable(self.fileno()))
+		return super().recvfrom(*args)
+	def recv_into(self, *args):
+		_await(_anyio.wait_socket_readable(self.fileno()))
+		return super().recv_into(*args)
+	def recvmsg_into(self, *args):
+		_await(_anyio.wait_socket_readable(self.fileno()))
+		return super().recvmsg_into(*args)
+	def recvfrom_into(self, *args):
+		_await(_anyio.wait_socket_readable(self.fileno()))
+		return super().recvfrom_into(*args)
 
-for n in "getsockopt setsockopt close bind fileno".split():
+for n in "getsockname getpeername getsockopt setsockopt close bind fileno".split():
 	setattr(socket,n,getattr(_socket,n))
 
 def _is_dead(n):
