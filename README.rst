@@ -9,7 +9,7 @@ Ideally, this works without modifying the synchronous code.
 Put another way,
 ``aevent`` is to ``gevent`` what ``anyio`` is to ``greenlet``.
 
-That is, it replaces standard Python functions with calls to ``anyio``
+That is, it replaces standard Python functions with calls to `anyio`_
 instead of ``gevent``.
 
 Some limitations apply.
@@ -24,23 +24,23 @@ Usage
    
 This will annoy various code checkers, but that can't be helped.
 
-**Start your main loop** using `aevent.run`, or call ``await aevent.per_task()``
+**Start your main loop** using ``aevent.run``, or call ``await aevent.per_task()``
 in the task(s) that need to use patched code.
 
-The `aevent.native` and `aevent.patched` context managers can be used to
+The ``aevent.native`` and ``aevent.patched`` context managers can be used to
 temporarily disable or re-enable ``aevent``'s patches.
 
 
 Support functions
 -----------------
 
-``aevent`` monkey-patches ``anyio``'s ``TaskGroup.spawn` in two ways.
+``aevent`` monkey-patches ``anyio``'s ``TaskGroup.spawn`` in two ways.
 
 * the child task is instrumented to support `greenback`.
 
 * ``spawn`` returns a cancel scope. You can use it to cancel the new task.
 
-Call `aevent.per_task` in your child task if you start tasks some other way.
+Call ``aevent.per_task`` in your child task if you start tasks some other way.
 
 
 Supported modules
@@ -84,16 +84,16 @@ These modules try to afford the same public interface as the ones they're
 replacing while calling the corresponding ``anyio`` functions through
 `greenback_`.
 
-Context switching back to async-flavored code is done by way of greenback_.
+Context switching back to async-flavored code is done by way of `greenback`_.
 
 ``aevent`` runs on Python 3.7 ff.
 
 Testing
 -------
 
-The test suite runs with Trio as backend. Due to ``aevent``'s monkeypatching,
+The test suite runs with `Trio <trio>`_ as backend. Due to ``aevent``'s monkeypatching,
 switching backends around is not supported. However, you can set the
-environment variable ``AEVENT_BACKEND`` to ``asyncio`` to run the test
+environment variable ``AEVENT_BACKEND`` to `asyncio`_ to run the test
 suite with that.
 
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
