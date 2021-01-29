@@ -140,7 +140,7 @@ def pytest_pyfunc_call(pyfuncitem):
         with get_runner(backend_name, backend_options) as runner:
             async def _main():
                 teardown = False
-                if True: # async with aevent_runner():
+                async with aevent_runner():
                     try:
                         self = pyfuncitem.obj.__self__
                     except AttributeError:
