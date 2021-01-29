@@ -1,6 +1,6 @@
 import anyio as _anyio
 from aevent import patch_ as _patch, await_ as _await, \
-	taskgroup as _taskgroup
+	taskgroup as _taskgroup, daemons as _daemons
 import os
 
 from threading import current_thread, Lock, RLock, Event, Thread, \
@@ -94,6 +94,9 @@ class _ThreadExc:
 
 class _Thread:
 	_th_id = None
+	_tg = None
+	_daemon = False
+	_daemons = None
 
 	def __init__(self, group=None, target=None, name=None, 
 			args=(), kwargs={}, *, daemon=None):
@@ -110,7 +113,7 @@ class _Thread:
 
 		if daemon is None:
 			daemon = current_thread().daemon
-		self.daemon = daemon
+		self._daemon = daemon
 
 
 	@property
@@ -130,15 +133,34 @@ class _Thread:
 
 	async def _start(self):
 		_active_threads.add(self)
+		self._tg = tg = _taskgroup.get()
+		self._daemons = _daemons[tg]
 		up = _anyio.create_event()
-		self._ctx = await _taskgroup.get().spawn(self._run, up, _aevent_name=self.name)
-		_await(up.wait())
+		self._ctx = await tg.spawn(self._run, up, _aevent_name=self.name)
+		if self._daemon:
+			self._daemons.add(self._ctx)
+		await up.set()
+
+	@property
+	def daemon(self):
+		return self._daemon
+	@daemon.setter
+	def daemon(self, flag):
+		if self._daemon == flag:
+			return
+		self._daemon = flag
+		if self._daemons is None:
+			return
+		if flag:
+			self._daemons.add(self._ctx)
+		else:
+			self._daemons.remove(self._ctx)
 
 	async def _run(self, evt):
-		await evt.set()
-		self.run()
+		await evt.wait()
+		self.run(evt)
 
-	def run(self):
+	def run(self, evt):
 		try:
 			if self._target:
 				self._target(*self._args, **self._kwargs)
@@ -147,17 +169,31 @@ class _Thread:
 		finally:
 			_await(self._done.set())
 			_active_threads.remove(self)
+			if self._daemon:
+				self._daemons.remove(self._ctx)
+
+			del self._daemons
+			del self._ctx
 
 	def join(self, timeout=-1):
 		_await(self._join(timeout))
 
 	async def _join(self,timeout):
+		if current_thread() is self:
+			raise RuntimeError("tried to join myself")
+		if self._ctx is None:
+			raise RuntimeError("not yet started")
 		if timeout<0:
 			await self._done.wait()
 		else:
 			async with _anyio.fail_after(timeout):
 				await self._done.wait()
 
+	def setDaemon(self, flag):
+		self.daemon = flag
+
+	def isDaemon(self):
+		return self.daemon
 
 	def __hash__(self):
 		return self._th_id

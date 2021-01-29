@@ -17,6 +17,7 @@ _monkey = None
 no_patch = ContextVar('no_patch', default=False)
 in_wrapper = ContextVar('in_wrapper', default=False)
 taskgroup = ContextVar('taskgroup')
+daemons = dict()  # taskgroup > set
 
 await_ = greenback.await_
 
@@ -41,11 +42,15 @@ def patched():
 @asynccontextmanager
 async def runner():
     async with anyio.create_task_group() as tg:
+        daemons[tg] = to_kill = set()
         token = taskgroup.set(tg)
         try:
             yield tg
         finally:
             taskgroup.reset(token)
+            del daemons[tg]
+            for d in list(to_kill):
+                await d.cancel()
 
 def run(proc, *args, **kwargs):
     """
@@ -143,6 +148,7 @@ def setup(backend='trio', exclude=()):
                     await evt.set()
                     await per_task()
                     await proc(*args, **kw)
+                    pass  # end of scope
 
             evt = anyio.create_event()
             await _real_spawn(taskgroup, _run, proc, args, kw, evt, name=_aevent_name)
