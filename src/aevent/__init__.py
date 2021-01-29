@@ -170,8 +170,8 @@ def setup(backend='trio', exclude=()):
                     await per_task()
                 try:
                     retval = await func(*args, **kwargs)
-                except Exception as exc:
-                    self._result_queue.append(Error(exc))
+#                except Exception as exc:
+#                    self._result_queue.append(Error(exc))
                 except BaseException as exc:
                     self._result_queue.append(Error(exc))
                     raise

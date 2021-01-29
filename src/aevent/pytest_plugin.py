@@ -137,6 +137,29 @@ def pytest_pyfunc_call(pyfuncitem):
 
         funcargs = pyfuncitem.funcargs
         testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
+
+        #if False:
+        with get_runner(backend_name, backend_options) as runner:  # old code
+            try:
+                self = pyfuncitem.obj.__self__
+            except AttributeError:
+                pass
+            else:
+                runner.call_sync(_nose.call_optional, self, "setup")
+                try:
+                    teardown = self.teardown
+                except AttributeError:
+                    pass
+            try:
+                if iscoroutinefunction(pyfuncitem.obj):
+                    runner.call(pyfuncitem.obj, **testargs)
+                else:
+                    runner.call_sync(pyfuncitem.obj, **testargs)
+            finally:
+                if teardown:
+                    runner.call_sync(teardown)
+            return True
+
         with get_runner(backend_name, backend_options) as runner:
             async def _main():
                 teardown = False
