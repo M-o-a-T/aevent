@@ -251,11 +251,15 @@ class Event:
 		if timeout is None:
 			await self._evt.wait()
 		else:
-			async with _anyio.fail_after(timeout):
-				await self._evt.wait()
+			try:
+				async with _anyio.fail_after(timeout):
+					await self._evt.wait()
+			except TimeoutError:
+				return False
+		return True
 
 	def wait(self, timeout=None):
-		_await(self._wait(timeout))
+		return _await(self._wait(timeout))
 
 	def set(self):
 		_await(self._evt.set())
