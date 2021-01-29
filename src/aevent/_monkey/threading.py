@@ -95,6 +95,7 @@ class _ThreadExc:
 class _Thread:
 	_th_id = None
 	_tg = None
+	_ctx = None
 	_daemon = False
 	_daemons = None
 
@@ -173,7 +174,6 @@ class _Thread:
 				self._daemons.remove(self._ctx)
 
 			del self._daemons
-			del self._ctx
 
 	def join(self, timeout=-1):
 		_await(self._join(timeout))
