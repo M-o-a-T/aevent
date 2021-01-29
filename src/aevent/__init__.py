@@ -168,15 +168,7 @@ def setup(backend='trio', exclude=()):
                 if not in_wrapper.get():
                     in_wrapper.set(True)
                     await per_task()
-                try:
-                    retval = await func(*args, **kwargs)
-#                except Exception as exc:
-#                    self._result_queue.append(Error(exc))
-                except BaseException as exc:
-                    self._result_queue.append(Error(exc))
-                    raise
-                else:
-                    self._result_queue.append(Value(retval))
+                await TR_call_func(self, func, args, kwargs)
 
 
             def call_sync(self, func, *args, **kwargs):
