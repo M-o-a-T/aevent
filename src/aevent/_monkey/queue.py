@@ -2,7 +2,7 @@ import anyio as _anyio
 import trio as _trio
 from aevent import patch_ as _patch, await_ as _await
 
-from queue import Queue, Empty
+from queue import Queue, Empty, Full
 
 @_patch
 class Queue:
@@ -28,7 +28,7 @@ class Queue:
 		if self._q_r is None:
 			self._q_w,self._q_r = _anyio.create_memory_object_stream(self._size)
 		if not block:
-			timeout = 0.01 # TODO
+			timeout = 0.1 # TODO
 		if timeout is None:
 			res = await self._q_r.receive()
 		else:
@@ -42,22 +42,28 @@ class Queue:
 
 
 	def put_nowait(self, item):
-		_await(self._put(item,0.01))  # TODO
+		_await(self._put(item,0.1))  # TODO
 
 	def put(self, item, timeout=None):
 		_await(self._put(item,timeout))
 	
-	async def _put(self, item, timeout):
+	async def _put(self, item, block=True, timeout=None):
+		if self._q_r is None:
+			self._q_w,self._q_r = _anyio.create_memory_object_stream(self._size)
+
 		self._count += 1
 		self._count_unack += 1
+		if not block:
+			timeout = 0.1 # TODO
 		try:
-			if self._q_r is None:
-				self._q_w,self._q_r = _anyio.create_memory_object_stream(self._size)
 			if timeout is None:
 				await self._q_w.send(item)
 			else:
-				async with _anyio.fail_after(timeout):
-					await self._q_w.send(item)
+				try:
+					async with _anyio.fail_after(timeout):
+						await self._q_w.send(item)
+				except TimeoutError:
+					raise Full from None
 		except BaseException:
 			self._count -= 1
 			await self._task_done()
