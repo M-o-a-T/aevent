@@ -10,4 +10,4 @@ fi
 export PYTHONPATH=src:sample/pyroute2:tests/pyroute2:../anyio/src:../greenback
 
 if test $# = 0 ; then set -- tests; fi
-python3 -mpytest -sxv "$@"
+python3 -mpytest "$@"
