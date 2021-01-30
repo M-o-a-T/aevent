@@ -1,4 +1,5 @@
 import anyio as _anyio
+import sniffio as _sniffio
 from aevent import patch_ as _patch, await_ as _await, \
 	taskgroup as _taskgroup, daemons as _daemons
 import os
@@ -13,6 +14,8 @@ from aevent.local import local
 
 class _Lock_Common:
 	async def _acquire(self, timeout, me=None):
+		if self._lock is None:
+			self._lock = _anyio.create_lock()
 		if timeout < 0:
 			await self._lock.acquire()
 		else:
@@ -24,6 +27,12 @@ class _Lock_Common:
 		if me is not None:
 			self._owner = me
 		return True
+
+	async def _release(self):
+		if _sniffio.current_async_library() == "trio":
+			import trio
+			self._lock._lock._owner = trio.lowlevel.current_task()
+		await self._lock.release()
 
 	def __enter__(self):
 		self.acquire()
@@ -38,15 +47,14 @@ class Lock(_Lock_Common):
 		pass
 
 	def acquire(self, blocking=True, timeout=-1):
-		if self._lock is None:
-			self._lock = _anyio.create_lock()
 		if not blocking:
 			timeout = 0.001
 			# XXX use nowait instead
 		return _await(self._acquire(timeout))
 
 	def release(self):
-		_await(self._lock.release())
+		# threading.Lock has no protection against releasing by the wrong task
+		_await(self._release())
 
 
 @_patch
@@ -78,7 +86,7 @@ class RLock(_Lock_Common):
 			self._count -= 1
 			return
 		self._owner = None
-		_await(self._lock.release())
+		_await(self._release())
 
 	def __enter__(self):
 		self.acquire()
