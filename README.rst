@@ -84,7 +84,58 @@ Not yet supported
 * subprocess
 * signal
 
-This list is cribbed from ``gevent.patch``.
+
+Subclassing patched classes
+---------------------------
+
+Directly subclassing one of the classes patched by ``aevent`` does not
+work and requires special consideration. Consider this code::
+
+   class my_thread(threading.Thread):
+      def run(self):
+          ...
+
+For use with ``aevent`` you can choose the original ``Thread``
+implementation::
+
+    orig_Thread = getattr(threading.Thread, "_aevent_orig", threading.Thread)
+    class my_thread(orig_Thread):
+      ...
+
+or the ``aevent``-ified version::
+
+    new_Thread = threading.Thread._aevent_new # fails when aevent is not loaded
+    class my_thread(new_Thread):
+      ...
+
+or you might want to create two separate implementations, and switch based
+on the aevent context::
+
+    class _orig_my_thread(threading.Thread._aevent_orig):
+       ...
+    class _new_my_thread(threading.Thread._aevent_new):
+       ...
+    my_thread = aevent.patch__new_my_thread, name="my_thread", orig=_orig_my_thread)
+
+If you generate local subclasses on the fly, you can simplify this to::
+
+    def some_code():
+        class my_thread(threading.Thread._aevent_select()):
+            def run(self):
+                ...
+        job = my_tread()
+        my_thread.start()
+
+
+Other affected modules
+----------------------
+
+You need to import any module which requires non-patched code before
+importing ``aevent``.
+
+Modules which are known to be affected:
+
+* multiprocessing
 
 
 Internals

@@ -247,13 +247,27 @@ def run(proc, *a, **k):
 
 def patch_(fn, name=None, orig=None):
     """
-    Convince an async to replace a sync one.
+    Convince an async-or-sync function to replace a sync one.
+
+    If `fn` is a class, subclassing it no longer works.
+
+    The patched result has three attributes
+    * _aevent_orig: the original function or class
+      used when `no_patch` is False
+    * _aevent_new: the replaced function or class
+      used when `no_patch` is True
+    * _aevent_select: a no-args function which, when called,
+      returns the old or new version based on `no_patch`
     """
+
     if isinstance(fn,partial):
         fname = fn.func.__name__
     else:
         fname = fn.__name__
     orig = orig or currentframe().f_back.f_globals[fname]
+
+    def fn_select(orig, fn):
+        return orig if no_patch.get() else fn
 
     def fn_async(orig, fn):
         def _new_async(*a, **k):
@@ -270,6 +284,12 @@ def patch_(fn, name=None, orig=None):
         return _new_sync
 
     if iscoroutinefunction(fn):
-        return update_wrapper(fn_async(orig,fn), fn)
-    return update_wrapper(fn_sync(orig,fn), fn)
+        w = update_wrapper(fn_async(orig,fn), fn)
+    else:
+        w = update_wrapper(fn_sync(orig,fn), fn)
+
+    w._aevent_orig = orig
+    w._aevent_new = orig
+    w._aevent_select = lambda: fn_select(orig, fn)
+    return w
 
