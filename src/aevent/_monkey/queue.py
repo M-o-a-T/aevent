@@ -1,7 +1,8 @@
 import anyio as _anyio
+import trio as _trio
 from aevent import patch_ as _patch, await_ as _await
 
-from queue import Queue
+from queue import Queue, Empty
 
 @_patch
 class Queue:
@@ -31,8 +32,11 @@ class Queue:
 		if timeout is None:
 			res = await self._q_r.receive()
 		else:
-			async with _anyio.fail_after(timeout):
-				res = await self._q_r.receive()
+			try:
+				async with _anyio.fail_after(timeout):
+					res = await self._q_r.receive()
+			except TimeoutError:
+				raise Empty from None
 		self._count -= 1
 		return res
 
