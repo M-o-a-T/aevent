@@ -42,6 +42,7 @@ def patched():
 @asynccontextmanager
 async def runner():
     async with anyio.create_task_group() as tg:
+        await per_task()
         daemons[tg] = to_kill = set()
         token = taskgroup.set(tg)
         try:
