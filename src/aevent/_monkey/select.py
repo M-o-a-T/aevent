@@ -69,10 +69,14 @@ class poll:
         async with _anyio.create_task_group() as tg:
             ctx = tg.cancel_scope
             for fd,mask in self._mask.items():
-                if mask&POLLIN:
-                    await tg.spawn(fd_read, fd)
-                if mask&POLLOUT:
-                    await tg.spawn(fd_write, fd)
+                if fd == -1:
+                    result.append((fd,POLLNVAL))
+                    timeout=0.01
+                else:
+                    if mask&POLLIN:
+                        await tg.spawn(fd_read, fd)
+                    if mask&POLLOUT:
+                        await tg.spawn(fd_write, fd)
             if timeout:
                 await anyio.sleep(timeout)
                 await ctx.cancel()
