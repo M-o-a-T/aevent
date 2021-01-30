@@ -60,14 +60,20 @@ Supported modules
 
 * threading
 * queue
+* atexit
+* socket
+* select
+
+  * poll
 
 Not yet supported
 -----------------
 
-* socket
+* select
+
+  * anything else
 
 * dns
-* select
 * os
 
   * read
