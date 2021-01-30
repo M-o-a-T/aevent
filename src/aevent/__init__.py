@@ -115,6 +115,7 @@ def setup(backend='trio', exclude=()):
             mm = getattr(mm._monkey, m)
         sys.modules[m] = mm
 
+    import_mod('os')
     import_mod('time')
     import_mod('socket')
     import_mod('queue')
