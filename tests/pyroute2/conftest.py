@@ -21,6 +21,6 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture(autouse=True)
 def chdir_here():
     pwd = os.getcwd()
-    os.chdir(Path("sample") / here.name)
+    os.chdir(Path("tests") / here.name)
     yield None
     os.chdir(pwd)
