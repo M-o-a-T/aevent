@@ -157,7 +157,7 @@ Context switching back to async-flavored code is done by way of `greenback`_.
 Testing
 -------
 
-The test suite runs with `Trio <trio>`_ as backend. Due to ``aevent``'s monkeypatching,
+The test suite runs with `trio`_ as backend. Due to ``aevent``'s monkeypatching,
 switching backends around is not supported. However, you can set the
 environment variable ``AEVENT_BACKEND`` to `asyncio`_ to run the test
 suite with that.
