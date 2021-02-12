@@ -1,0 +1,32 @@
+Source: aevent
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 9)
+Standards-Version: 3.9.6
+
+Package: python3-aevent
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: Call synchronous Python from async code, without blocking
+ ====================================
+ ``aevent``: an asyncronizing library
+ ====================================
+ .
+ ``aevent`` lets you call boring synchronous Python from async code.
+ Without blocking or splatting ``async`` and ``await`` onto it.
+ Ideally, this works without modifying the synchronous code.
+ .
+ Put another way,
+ ``aevent`` is to ``gevent`` what ``anyio`` is to ``greenlet``.
+ .
+ That is, it replaces standard Python functions with calls to `anyio`_
+ instead of ``gevent``.
+ .
+ Some limitations apply.
+ .
+ Usage
+ =====
+ .
+ **Before any other imports**, insert this code block into your main code::
+
