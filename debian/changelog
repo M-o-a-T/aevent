@@ -1,3 +1,9 @@
+aevent (0.1.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Feb 2021 08:36:03 +0100
+
 aevent (0.1.0-1) unstable; urgency=low
 
   * source package automatically created by stdeb 0.9.1
