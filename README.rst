@@ -162,7 +162,12 @@ switching backends around is not supported. However, you can set the
 environment variable ``AEVENT_BACKEND`` to `asyncio`_ to run the test
 suite with that.
 
+The test suite pulls in a copy of `pyroute2`_ (no changes, other than fixing
+bugs unrelated to ``aevent``) and tests against its test suite, thereby
+(mostly) ensuring that this particular package works with ``aevent``.
+
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
 .. _trio: https://github.com/python-trio/trio
 .. _anyio: https://github.com/agronholm/anyio
 .. _greenback: https://github.com/oremanj/greenback
+.. _pyroute2: https://github.com/svinota/pyroute2
