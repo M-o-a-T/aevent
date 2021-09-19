@@ -3,6 +3,8 @@ import trio as _trio
 from aevent import patch_ as _patch, await_ as _await
 
 from os import *
+import os as _os
+
 _read = read
 _write = write
 
@@ -21,3 +23,6 @@ def write(fd, *args):
     _await(_anyio.wait_socket_writable(fd))
     return _write(fd, *args)
 
+for k in dir(_os):
+    if k.startswith("supports_"):
+        globals()[k] = getattr(_os,k)
