@@ -6,8 +6,18 @@ import os as _os
 from collections import deque as _deque
 
 from threading import current_thread, Lock, RLock, Event, Thread, \
-		_shutdown, excepthook, active_count, get_ident, get_native_id, \
+		_shutdown, active_count, get_ident, \
 		main_thread, Condition, Barrier
+try:
+    from threading import excepthook
+except ImportError:
+    def excepthook(x):
+        raise x.exc_value
+try:
+    from threading import get_native_id
+except ImportError:
+    get_native_id = _os.getpid ## fake
+
 from contextvars import ContextVar
 
 
