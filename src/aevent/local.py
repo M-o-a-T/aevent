@@ -78,7 +78,7 @@ def _patch(self):
 class local:
     __slots__ = '_local__impl', '__dict__'
 
-    def __new__(cls, /, *args, **kw):
+    def __new__(cls, *args, **kw):
         if (args or kw) and (cls.__init__ is object.__init__):
             raise TypeError("Initialization arguments are not supported")
         self = object.__new__(cls)

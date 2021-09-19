@@ -7,7 +7,7 @@ from socket import socket as _socket, inet_pton, inet_ntop, AF_INET, \
 	SOCK_DGRAM, MSG_PEEK, SOL_SOCKET, SO_RCVBUF, SO_SNDBUF, AF_UNIX, \
 	IPPROTO_TCP, SOCK_STREAM, AF_PACKET, SOCK_RAW, SO_REUSEADDR, \
 	SHUT_RDWR, IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_UDP, AI_PASSIVE, \
-	getprotobyname
+	getprotobyname, _GLOBAL_DEFAULT_TIMEOUT
 
 error = OSError
 import errno # as _errno ## used as public API by too many

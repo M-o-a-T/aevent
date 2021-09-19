@@ -2,8 +2,9 @@ import anyio as _anyio
 import trio as _trio
 from aevent import patch_ as _patch, await_ as _await
 
-from os import *
+from os import supports_dir_fd,supports_fd,supports_follow_symlinks
 import os as _os
+import sys  # yes, some standard modules actually need that.
 
 _read = read
 _write = write
